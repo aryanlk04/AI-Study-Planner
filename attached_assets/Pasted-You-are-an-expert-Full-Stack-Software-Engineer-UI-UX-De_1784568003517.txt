@@ -1,0 +1,379 @@
+You are an expert Full Stack Software Engineer, UI/UX Designer, and Product Designer.
+
+Build a premium, production-quality Study AI Planner web application.
+
+## Tech Stack
+
+- React + Vite
+- Tailwind CSS
+- Firebase Authentication
+- Firebase Firestore Database
+- Firebase Storage
+- React Router
+- Framer Motion for smooth animations
+- Lucide React icons
+
+The code should be clean, modular, scalable, and well-organized.
+
+----------------------------------------
+
+## IMPORTANT DESIGN REQUIREMENTS
+
+DO NOT create a typical AI website.
+
+Avoid:
+- Blue backgrounds
+- Purple gradients
+- Neon effects
+- Dark futuristic UI
+- Space/universe themes
+- Hacker-style interfaces
+
+Instead create a calm, premium productivity application inspired by:
+
+• Apple
+• Notion
+• MUJI
+• Google Calendar
+• Linear
+• Todoist
+
+The application should feel warm, elegant, minimalistic, and realistic.
+
+----------------------------------------
+
+## Color Palette
+
+Background
+#F8F5F1
+
+Secondary Background
+#FFFDF9
+
+Cards
+#FFFFFF
+
+Primary Accent
+#C8A97E
+
+Secondary Accent
+#8A6E55
+
+Primary Text
+#2E2A27
+
+Secondary Text
+#6E665F
+
+Borders
+#E8DFD5
+
+Success
+#7FA37A
+
+Warning
+#D7A45C
+
+Danger
+#D87979
+
+----------------------------------------
+
+## Typography
+
+Headings
+Poppins
+
+Body
+Inter
+
+----------------------------------------
+
+## UI Style
+
+Large rounded cards (20px radius)
+
+Soft shadows
+
+Lots of whitespace
+
+Elegant spacing
+
+Smooth transitions
+
+Glass effect only where appropriate
+
+No glowing effects
+
+No bright colors
+
+Subtle hover animations
+
+Modern dashboard layout
+
+Beautiful icons using Lucide React
+
+----------------------------------------
+
+## Pages
+
+Landing Page
+
+Login
+
+Sign Up
+
+Forgot Password
+
+Dashboard
+
+Study Planner
+
+AI Planner
+
+Task Manager
+
+Calendar
+
+Pomodoro Timer
+
+Notes
+
+Flashcards
+
+Progress Tracker
+
+Analytics
+
+Settings
+
+Profile
+
+----------------------------------------
+
+## Landing Page
+
+Create an elegant hero section with:
+
+Headline:
+"Study Smarter, Achieve More."
+
+Subtitle:
+"Plan your studies, stay focused, and let AI help you achieve your goals."
+
+Buttons:
+
+Get Started
+
+Sign In
+
+Illustration:
+A modern organized study desk with books, laptop, notebook, coffee, and calendar.
+
+No robot illustrations.
+
+----------------------------------------
+
+## Dashboard
+
+Dashboard should include:
+
+Greeting
+
+Today's Study Time
+
+Upcoming Tasks
+
+Today's Schedule
+
+AI Recommendations
+
+Weekly Progress
+
+Productivity Score
+
+Recent Notes
+
+Upcoming Exams
+
+Quick Actions
+
+Everything should be displayed inside premium cards.
+
+----------------------------------------
+
+## Authentication
+
+Use Firebase Authentication.
+
+Support:
+
+Email & Password
+
+Google Login
+
+Forgot Password
+
+Keep users logged in.
+
+Protect all routes.
+
+----------------------------------------
+
+## Firestore
+
+Each user should have their own data.
+
+Collections:
+
+users
+
+tasks
+
+notes
+
+subjects
+
+flashcards
+
+goals
+
+study_sessions
+
+planner
+
+analytics
+
+----------------------------------------
+
+## Features
+
+Create Study Plan
+
+AI-generated study schedules
+
+Daily Planner
+
+Weekly Planner
+
+Monthly Planner
+
+Task Management
+
+Notes
+
+Pomodoro Timer
+
+Study Streak
+
+Achievements
+
+Calendar
+
+Subject Management
+
+Progress Charts
+
+Exam Countdown
+
+Flashcards
+
+AI Study Assistant
+
+----------------------------------------
+
+## AI Features
+
+Allow users to:
+
+Generate study timetable
+
+Ask study questions
+
+Get revision plans
+
+Create quizzes
+
+Summarize notes
+
+Explain difficult topics
+
+Generate flashcards
+
+Suggest study techniques
+
+----------------------------------------
+
+## Responsive Design
+
+Desktop
+
+Tablet
+
+Mobile
+
+Everything should be responsive.
+
+----------------------------------------
+
+## Animations
+
+Use Framer Motion.
+
+Subtle fade
+
+Slide up
+
+Scale
+
+No flashy animations.
+
+----------------------------------------
+
+## Folder Structure
+
+Organize the project professionally:
+
+components/
+
+pages/
+
+layouts/
+
+hooks/
+
+contexts/
+
+firebase/
+
+services/
+
+utils/
+
+assets/
+
+styles/
+
+----------------------------------------
+
+## Code Quality
+
+Use reusable components.
+
+Avoid duplicate code.
+
+Use React Hooks.
+
+Proper loading states.
+
+Error handling.
+
+Clean comments.
+
+Maintainable architecture.
+
+----------------------------------------
+
+## Final Goal
+
+The application should look like a premium SaaS product that could realistically be launched on the App Store or Play Store. Prioritize excellent UI/UX, accessibility, responsive design, and maintainable code over flashy AI aesthetics.
