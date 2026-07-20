@@ -25,6 +25,25 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  const getErrorMessage = (code: string) => {
+    switch (code) {
+      case 'auth/unauthorized-domain':
+        return `This domain is not authorized in Firebase. Go to Firebase Console → Authentication → Settings → Authorized domains and add: ${window.location.hostname}`;
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential':
+        return 'Incorrect email or password. Please try again.';
+      case 'auth/too-many-requests':
+        return 'Too many failed attempts. Please wait a moment and try again.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your connection.';
+      case 'auth/popup-blocked':
+        return 'Pop-up was blocked by your browser. Please allow pop-ups and try again.';
+      default:
+        return 'Failed to sign in. Please check your credentials and try again.';
+    }
+  };
+
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     setError(null);
@@ -33,7 +52,7 @@ export default function LoginPage() {
       setLocation('/dashboard');
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Failed to sign in. Please check your credentials.');
+      setError(getErrorMessage(err.code));
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +66,7 @@ export default function LoginPage() {
       setLocation('/dashboard');
     } catch (err: any) {
       console.error(err);
-      setError('Failed to sign in with Google.');
+      setError(getErrorMessage(err.code));
     } finally {
       setIsGoogleLoading(false);
     }
