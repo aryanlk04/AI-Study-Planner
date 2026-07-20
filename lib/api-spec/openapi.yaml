@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: ai
+    description: AI study assistant operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,140 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /ai/chat:
+    post:
+      operationId: aiChat
+      tags: [ai]
+      summary: Chat with AI study assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiChatInput"
+      responses:
+        "200":
+          description: AI response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiChatResponse"
+
+  /ai/generate-plan:
+    post:
+      operationId: aiGeneratePlan
+      tags: [ai]
+      summary: Generate an AI study timetable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiPlanInput"
+      responses:
+        "200":
+          description: Generated study plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiPlanResponse"
+
+  /ai/summarize:
+    post:
+      operationId: aiSummarize
+      tags: [ai]
+      summary: Summarize study notes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiSummarizeInput"
+      responses:
+        "200":
+          description: Summarized content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiTextResponse"
+
+  /ai/quiz:
+    post:
+      operationId: aiGenerateQuiz
+      tags: [ai]
+      summary: Generate quiz questions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiQuizInput"
+      responses:
+        "200":
+          description: Generated quiz questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiQuizResponse"
+
+  /ai/flashcards:
+    post:
+      operationId: aiGenerateFlashcards
+      tags: [ai]
+      summary: Generate flashcard set from content
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiFlashcardsInput"
+      responses:
+        "200":
+          description: Generated flashcards
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiFlashcardsResponse"
+
+  /ai/explain:
+    post:
+      operationId: aiExplain
+      tags: [ai]
+      summary: Explain a topic in simple terms
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiExplainInput"
+      responses:
+        "200":
+          description: Explanation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiTextResponse"
+
+  /ai/suggestions:
+    post:
+      operationId: aiGetSuggestions
+      tags: [ai]
+      summary: Get personalized study technique suggestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiSuggestionsInput"
+      responses:
+        "200":
+          description: Study suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiSuggestionsResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +170,222 @@ components:
       required:
         - status
 
+    AiChatInput:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: User's message to the AI assistant
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+          description: Previous conversation messages
+        subject:
+          type: ["string", "null"]
+          description: Optional subject context
+
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+
+    AiChatResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    AiPlanInput:
+      type: object
+      required: [subjects, availableHoursPerDay, examDate]
+      properties:
+        subjects:
+          type: array
+          items:
+            type: string
+          description: List of subjects to study
+        availableHoursPerDay:
+          type: number
+          description: Hours available per day for studying
+        examDate:
+          type: string
+          description: Target exam date (ISO string)
+        currentLevel:
+          type: ["string", "null"]
+          description: Student's current knowledge level
+        goals:
+          type: ["string", "null"]
+          description: Study goals
+
+    AiPlanResponse:
+      type: object
+      required: [plan]
+      properties:
+        plan:
+          type: string
+          description: Generated study plan as markdown text
+        schedule:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScheduleDay"
+
+    ScheduleDay:
+      type: object
+      required: [day, tasks]
+      properties:
+        day:
+          type: string
+        tasks:
+          type: array
+          items:
+            type: string
+
+    AiSummarizeInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          description: Text content to summarize
+        length:
+          type: ["string", "null"]
+          enum: ["short", "medium", "long", null]
+
+    AiTextResponse:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+
+    AiQuizInput:
+      type: object
+      required: [topic, questionCount]
+      properties:
+        topic:
+          type: string
+          description: Topic to quiz on
+        questionCount:
+          type: integer
+          minimum: 1
+          maximum: 20
+        difficulty:
+          type: ["string", "null"]
+          enum: ["easy", "medium", "hard", null]
+        content:
+          type: ["string", "null"]
+          description: Optional source content for the quiz
+
+    AiQuizResponse:
+      type: object
+      required: [questions]
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+
+    QuizQuestion:
+      type: object
+      required: [question, options, correctAnswer]
+      properties:
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: string
+        explanation:
+          type: ["string", "null"]
+
+    AiFlashcardsInput:
+      type: object
+      required: [topic, cardCount]
+      properties:
+        topic:
+          type: string
+          description: Topic to create flashcards for
+        cardCount:
+          type: integer
+          minimum: 1
+          maximum: 30
+        content:
+          type: ["string", "null"]
+          description: Optional source content
+
+    AiFlashcardsResponse:
+      type: object
+      required: [flashcards]
+      properties:
+        flashcards:
+          type: array
+          items:
+            $ref: "#/components/schemas/Flashcard"
+
+    Flashcard:
+      type: object
+      required: [front, back]
+      properties:
+        front:
+          type: string
+        back:
+          type: string
+
+    AiExplainInput:
+      type: object
+      required: [topic]
+      properties:
+        topic:
+          type: string
+          description: Topic to explain
+        level:
+          type: ["string", "null"]
+          enum: ["beginner", "intermediate", "advanced", null]
+        context:
+          type: ["string", "null"]
+          description: Additional context
+
+    AiSuggestionsInput:
+      type: object
+      required: [subjects]
+      properties:
+        subjects:
+          type: array
+          items:
+            type: string
+        studyPattern:
+          type: ["string", "null"]
+          description: How the student typically studies
+        struggles:
+          type: ["string", "null"]
+          description: Areas the student struggles with
+
+    AiSuggestionsResponse:
+      type: object
+      required: [suggestions]
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudySuggestion"
+
+    StudySuggestion:
+      type: object
+      required: [title, description]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        technique:
+          type: ["string", "null"]
