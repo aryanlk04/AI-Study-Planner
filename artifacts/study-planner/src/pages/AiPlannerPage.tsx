@@ -46,13 +46,13 @@ export default function AiPlannerPage() {
         subjects: selectedSubjects,
         availableHoursPerDay: hoursPerDay,
         examDate: new Date(examDate).toISOString(),
-        goals: goals || undefined,
-        currentLevel: 'intermediate'
+        ...(goals ? { goals } : {}),
+        currentLevel: 'intermediate',
       }
     }, {
       onSuccess: (data) => {
         setGeneratedPlan(data);
-      }
+      },
     });
   };
 
@@ -176,10 +176,23 @@ export default function AiPlannerPage() {
               />
             </div>
 
+            {generatePlanMutation.isError && (
+              <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" data-testid="ai-plan-error">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-red-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div>
+                  <p className="font-medium">Failed to generate plan</p>
+                  <p className="mt-0.5 text-red-600 font-mono text-xs break-all">
+                    {(generatePlanMutation.error as any)?.message ?? 'Server error — check that your OpenAI API key is correct in Replit Secrets.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={handleGenerate}
               disabled={generatePlanMutation.isPending}
               className="w-full flex items-center justify-center gap-2 bg-foreground text-background py-4 rounded-xl font-medium text-lg hover:bg-primary transition-all duration-300 disabled:opacity-70 shadow-md hover:shadow-lg hover:-translate-y-0.5"
+              data-testid="button-generate-plan"
             >
               {generatePlanMutation.isPending ? (
                 <>
