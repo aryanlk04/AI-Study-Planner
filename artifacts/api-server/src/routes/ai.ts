@@ -1,5 +1,5 @@
 import { Router } from "express";
-import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import {
   AiChatBody,
   AiGeneratePlanBody,
@@ -12,11 +12,19 @@ import {
 
 const router = Router();
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error("OPENAI_API_KEY environment variable is required");
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("GEMINI_API_KEY environment variable is required");
 }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const MODEL = "gemini-2.5-flash";
+
+/** Strip markdown code fences that Gemini sometimes wraps around JSON */
+function extractJson(raw: string): string {
+  const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  return fenced ? fenced[1].trim() : raw.trim();
+}
 
 // POST /ai/chat
 router.post("/chat", async (req, res) => {
@@ -28,28 +36,30 @@ router.post("/chat", async (req, res) => {
 
   const { message, history = [], subject } = parsed.data;
 
-  const systemPrompt = `You are an expert AI study assistant helping students learn effectively. You provide clear, accurate, and encouraging responses. ${subject ? `The current subject context is: ${subject}.` : ""} Keep responses concise, actionable, and educational.`;
+  const systemInstruction = `You are an expert AI study assistant helping students learn effectively. You provide clear, accurate, and encouraging responses.${subject ? ` The current subject context is: ${subject}.` : ""} Keep responses concise, actionable, and educational.`;
 
-  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: "system", content: systemPrompt },
+  // Gemini uses "model" instead of "assistant" for the AI role
+  const contents = [
     ...history.map((h) => ({
-      role: h.role as "user" | "assistant",
-      content: h.content,
+      role: h.role === "assistant" ? "model" : "user",
+      parts: [{ text: h.content }],
     })),
-    { role: "user", content: message },
+    { role: "user", parts: [{ text: message }] },
   ];
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 1024,
-      messages,
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents,
+      config: {
+        systemInstruction,
+        maxOutputTokens: 8192,
+      },
     });
 
-    const responseMessage = completion.choices[0]?.message?.content ?? "";
-    res.json({ message: responseMessage });
+    res.json({ message: response.text ?? "" });
   } catch (err) {
-    req.log.error({ err }, "OpenAI chat error");
+    req.log.error({ err }, "Gemini chat error");
     res.status(500).json({ error: "Failed to generate AI response" });
   }
 });
@@ -64,41 +74,38 @@ router.post("/generate-plan", async (req, res) => {
 
   const { subjects, availableHoursPerDay, examDate, currentLevel, goals } = parsed.data;
 
-  const prompt = `Create a detailed, realistic study plan for the following:
+  const prompt = `Create a detailed, realistic study plan for the following student:
+
 Subjects: ${subjects.join(", ")}
 Available study hours per day: ${availableHoursPerDay}
 Exam/target date: ${examDate}
 Current level: ${currentLevel ?? "Not specified"}
 Goals: ${goals ?? "Not specified"}
 
-Provide:
-1. A comprehensive markdown study plan overview
-2. A week-by-week or day-by-day schedule in JSON with format: { "schedule": [{ "day": "Monday", "tasks": ["Task 1", "Task 2"] }] }
+Respond with a JSON object containing exactly two keys:
+- "plan": a comprehensive markdown string with the study plan overview, tips, and strategy
+- "schedule": an array of objects like [{ "day": "Monday", "tasks": ["Task 1", "Task 2"] }] covering the full study period week by week
 
-Format your response as JSON with keys "plan" (markdown string) and "schedule" (array).`;
+Return only valid JSON, no extra text.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 2048,
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert academic planner. Always respond with valid JSON.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: "You are an expert academic planner. Always respond with valid JSON only — no markdown fences, no extra commentary.",
+        responseMimeType: "application/json",
+        maxOutputTokens: 8192,
+      },
     });
 
-    const content = completion.choices[0]?.message?.content ?? "{}";
-    const parsed = JSON.parse(content);
+    const data = JSON.parse(extractJson(response.text ?? "{}"));
     res.json({
-      plan: parsed.plan ?? "Study plan generated.",
-      schedule: parsed.schedule ?? [],
+      plan: data.plan ?? "Study plan generated.",
+      schedule: data.schedule ?? [],
     });
   } catch (err) {
-    req.log.error({ err }, "OpenAI generate-plan error");
+    req.log.error({ err }, "Gemini generate-plan error");
     res.status(500).json({ error: "Failed to generate study plan" });
   }
 });
@@ -116,21 +123,18 @@ router.post("/summarize", async (req, res) => {
     length === "short" ? "2-3 sentences" : length === "long" ? "3-5 paragraphs" : "1-2 paragraphs";
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert at summarizing academic content. Create a clear, concise summary of ${lengthGuide}. Preserve key concepts and important details.`,
-        },
-        { role: "user", content: `Please summarize the following:\n\n${content}` },
-      ],
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: `Please summarize the following:\n\n${content}` }] }],
+      config: {
+        systemInstruction: `You are an expert at summarizing academic content. Create a clear, concise summary of ${lengthGuide}. Preserve key concepts and important details.`,
+        maxOutputTokens: 8192,
+      },
     });
 
-    res.json({ text: completion.choices[0]?.message?.content ?? "" });
+    res.json({ text: response.text ?? "" });
   } catch (err) {
-    req.log.error({ err }, "OpenAI summarize error");
+    req.log.error({ err }, "Gemini summarize error");
     res.status(500).json({ error: "Failed to summarize content" });
   }
 });
@@ -149,36 +153,33 @@ router.post("/quiz", async (req, res) => {
 Difficulty: ${difficulty}
 ${content ? `Source material:\n${content}` : ""}
 
-Return JSON with format:
+Respond with a JSON object:
 {
   "questions": [
     {
       "question": "...",
-      "options": ["A", "B", "C", "D"],
-      "correctAnswer": "A",
+      "options": ["A. option", "B. option", "C. option", "D. option"],
+      "correctAnswer": "A. option",
       "explanation": "..."
     }
   ]
 }`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 2048,
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert educator creating quiz questions. Always respond with valid JSON.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: "You are an expert educator creating quiz questions. Always respond with valid JSON only.",
+        responseMimeType: "application/json",
+        maxOutputTokens: 8192,
+      },
     });
 
-    const data = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+    const data = JSON.parse(extractJson(response.text ?? "{}"));
     res.json({ questions: data.questions ?? [] });
   } catch (err) {
-    req.log.error({ err }, "OpenAI quiz error");
+    req.log.error({ err }, "Gemini quiz error");
     res.status(500).json({ error: "Failed to generate quiz" });
   }
 });
@@ -196,7 +197,7 @@ router.post("/flashcards", async (req, res) => {
   const prompt = `Generate ${cardCount} flashcards for studying "${topic}".
 ${content ? `Source material:\n${content}` : ""}
 
-Return JSON with format:
+Respond with a JSON object:
 {
   "flashcards": [
     { "front": "Question or term", "back": "Answer or definition" }
@@ -204,23 +205,20 @@ Return JSON with format:
 }`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 2048,
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert at creating educational flashcards. Always respond with valid JSON.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: "You are an expert at creating educational flashcards. Always respond with valid JSON only.",
+        responseMimeType: "application/json",
+        maxOutputTokens: 8192,
+      },
     });
 
-    const data = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+    const data = JSON.parse(extractJson(response.text ?? "{}"));
     res.json({ flashcards: data.flashcards ?? [] });
   } catch (err) {
-    req.log.error({ err }, "OpenAI flashcards error");
+    req.log.error({ err }, "Gemini flashcards error");
     res.status(500).json({ error: "Failed to generate flashcards" });
   }
 });
@@ -234,32 +232,31 @@ router.post("/explain", async (req, res) => {
   }
 
   const { topic, level = "intermediate", context } = parsed.data;
-  const audienceMap = {
+  const audienceMap: Record<string, string> = {
     beginner: "a complete beginner with no prior knowledge",
-    intermediate: "someone with basic understanding",
-    advanced: "an advanced student who wants deeper insight",
+    intermediate: "someone with basic understanding of the subject",
+    advanced: "an advanced student who wants deeper insight and nuance",
   };
-  const audience = audienceMap[level as keyof typeof audienceMap] ?? audienceMap.intermediate;
+  const audience = (level ? audienceMap[level] : null) ?? audienceMap.intermediate;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert teacher. Explain concepts clearly and accessibly for ${audience}. Use examples, analogies, and break down complex ideas into digestible parts.`,
-        },
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [
         {
           role: "user",
-          content: `Please explain: ${topic}${context ? `\n\nAdditional context: ${context}` : ""}`,
+          parts: [{ text: `Please explain: ${topic}${context ? `\n\nAdditional context: ${context}` : ""}` }],
         },
       ],
+      config: {
+        systemInstruction: `You are an expert teacher. Explain concepts clearly and accessibly for ${audience}. Use examples, analogies, and break complex ideas into digestible parts.`,
+        maxOutputTokens: 8192,
+      },
     });
 
-    res.json({ text: completion.choices[0]?.message?.content ?? "" });
+    res.json({ text: response.text ?? "" });
   } catch (err) {
-    req.log.error({ err }, "OpenAI explain error");
+    req.log.error({ err }, "Gemini explain error");
     res.status(500).json({ error: "Failed to explain topic" });
   }
 });
@@ -279,7 +276,7 @@ Subjects: ${subjects.join(", ")}
 Study pattern: ${studyPattern ?? "Not specified"}
 Struggles with: ${struggles ?? "Not specified"}
 
-Return JSON with format:
+Respond with a JSON object:
 {
   "suggestions": [
     {
@@ -290,27 +287,23 @@ Return JSON with format:
   ]
 }
 
-Provide 4-6 specific, actionable suggestions.`;
+Provide 4-6 specific, actionable suggestions tailored to these subjects and struggles.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an expert learning coach. Provide practical, evidence-based study technique suggestions. Always respond with valid JSON.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: {
+        systemInstruction: "You are an expert learning coach. Provide practical, evidence-based study technique suggestions. Always respond with valid JSON only.",
+        responseMimeType: "application/json",
+        maxOutputTokens: 8192,
+      },
     });
 
-    const data = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+    const data = JSON.parse(extractJson(response.text ?? "{}"));
     res.json({ suggestions: data.suggestions ?? [] });
   } catch (err) {
-    req.log.error({ err }, "OpenAI suggestions error");
+    req.log.error({ err }, "Gemini suggestions error");
     res.status(500).json({ error: "Failed to generate suggestions" });
   }
 });
