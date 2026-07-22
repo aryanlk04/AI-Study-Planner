@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Brain, Sparkles, Layers, RotateCcw, Check, X, Loader2 } from 'lucide-react';
+import { PageError } from '@/components/ErrorMessage';
 import { useFlashcards, Flashcard } from '@/hooks/use-flashcards';
 import { useSubjects } from '@/hooks/use-subjects';
 import { useAiGenerateFlashcards } from '@workspace/api-client-react';
 
 export default function FlashcardsPage() {
-  const { flashcards, loading, addFlashcard, updateReview, deleteFlashcard } = useFlashcards();
+  const { flashcards, loading, error, addFlashcard, updateReview, deleteFlashcard } = useFlashcards();
   const { subjects } = useSubjects();
   const generateMutation = useAiGenerateFlashcards();
 
@@ -84,6 +85,9 @@ export default function FlashcardsPage() {
 
   if (loading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="animate-spin text-primary" size={32} /></div>;
+  }
+  if (error) {
+    return <PageError error={error} title="Failed to load flashcards" />;
   }
 
   // --- Study Mode View ---

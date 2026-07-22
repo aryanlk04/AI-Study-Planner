@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Bot, FileText, Trash2, Edit3, X, Sparkles, Loader2 } from 'lucide-react';
+import { PageError } from '@/components/ErrorMessage';
 import { useNotes, Note } from '@/hooks/use-notes';
 import { useSubjects } from '@/hooks/use-subjects';
 import { format } from 'date-fns';
 import { useAiSummarize } from '@workspace/api-client-react';
 
 export default function NotesPage() {
-  const { notes, loading, addNote, updateNote, deleteNote } = useNotes();
+  const { notes, loading, error, addNote, updateNote, deleteNote } = useNotes();
   const { subjects } = useSubjects();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState<string | 'all'>('all');
@@ -100,6 +101,9 @@ export default function NotesPage() {
 
   if (loading) {
     return <div className="flex h-full items-center justify-center"><Loader2 className="animate-spin text-primary" size={32} /></div>;
+  }
+  if (error) {
+    return <PageError error={error} title="Failed to load notes" />;
   }
 
   return (

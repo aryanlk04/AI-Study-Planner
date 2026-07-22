@@ -29,6 +29,7 @@ export function useFlashcards() {
   const { user } = useAuth();
   const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -42,26 +43,38 @@ export function useFlashcards() {
       where('userId', '==', user.uid)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          ...d,
-          nextReviewDate: d.nextReviewDate?.toDate() || new Date(),
-          createdAt: d.createdAt?.toDate() || new Date(),
-        } as Flashcard;
-      });
-      setFlashcards(data);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs
+          .map((doc) => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              ...d,
+              nextReviewDate: d.nextReviewDate?.toDate() || new Date(),
+              createdAt: d.createdAt?.toDate() || new Date(),
+            } as Flashcard;
+          })
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setFlashcards(data);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error('Error fetching flashcards:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, [user]);
 
-  const addFlashcard = async (card: Omit<Flashcard, 'id' | 'userId' | 'createdAt' | 'difficulty' | 'nextReviewDate'>) => {
+  const addFlashcard = async (
+    card: Omit<Flashcard, 'id' | 'userId' | 'createdAt' | 'difficulty' | 'nextReviewDate'>
+  ) => {
     if (!user) throw new Error('Must be logged in');
-    
     await addDoc(collection(db, 'flashcards'), {
       ...card,
       userId: user.uid,
@@ -72,23 +85,17 @@ export function useFlashcards() {
   };
 
   const updateReview = async (id: string, difficulty: 'easy' | 'medium' | 'hard') => {
-    // Basic spaced repetition logic
     let daysToAdd = 1;
     if (difficulty === 'easy') daysToAdd = 4;
     else if (difficulty === 'medium') daysToAdd = 2;
-    
     const nextReview = new Date();
     nextReview.setDate(nextReview.getDate() + daysToAdd);
-
-    await updateDoc(doc(db, 'flashcards', id), {
-      difficulty,
-      nextReviewDate: nextReview,
-    });
+    await updateDoc(doc(db, 'flashcards', id), { difficulty, nextReviewDate: nextReview });
   };
 
   const deleteFlashcard = async (id: string) => {
     await deleteDoc(doc(db, 'flashcards', id));
   };
 
-  return { flashcards, loading, addFlashcard, updateReview, deleteFlashcard };
+  return { flashcards, loading, error, addFlashcard, updateReview, deleteFlashcard };
 }

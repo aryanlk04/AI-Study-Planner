@@ -27,6 +27,7 @@ export function useSubjects() {
   const { user } = useAuth();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -40,19 +41,28 @@ export function useSubjects() {
       where('userId', '==', user.uid)
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          ...d,
-          examDate: d.examDate?.toDate() || null,
-          createdAt: d.createdAt?.toDate() || new Date(),
-        } as Subject;
-      });
-      setSubjects(data);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            ...d,
+            examDate: d.examDate?.toDate() || null,
+            createdAt: d.createdAt?.toDate() || new Date(),
+          } as Subject;
+        });
+        setSubjects(data);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        console.error('Error fetching subjects:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, [user]);
@@ -74,5 +84,5 @@ export function useSubjects() {
     await deleteDoc(doc(db, 'subjects', id));
   };
 
-  return { subjects, loading, addSubject, updateSubject, deleteSubject };
+  return { subjects, loading, error, addSubject, updateSubject, deleteSubject };
 }

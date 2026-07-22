@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/firebase/config';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
 import { Trophy, Flame, Target, BookOpen, Clock, Calendar as CalendarIcon } from 'lucide-react';
 import { format, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from 'date-fns';
@@ -13,31 +13,35 @@ export default function AnalyticsPage() {
   const { subjects } = useSubjects();
   const [sessions, setSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
-      if (!user) return;
-      
-      // Get last 30 days of sessions
-      const thirtyDaysAgo = subDays(new Date(), 30);
-      
-      const q = query(
-        collection(db, 'study_sessions'),
-        where('userId', '==', user.uid),
-        orderBy('date', 'desc')
-      );
-
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => {
-        const d = doc.data();
-        return {
-          ...d,
-          date: d.date?.toDate() || new Date()
-        };
-      });
-      
-      setSessions(data);
-      setLoading(false);
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      try {
+        // No orderBy — avoids composite index requirement. Sort client-side.
+        const q = query(
+          collection(db, 'study_sessions'),
+          where('userId', '==', user.uid)
+        );
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs
+          .map((doc) => {
+            const d = doc.data();
+            return { ...d, date: d.date?.toDate() || new Date() };
+          })
+          .sort((a: any, b: any) => b.date.getTime() - a.date.getTime());
+        setSessions(data);
+        setFetchError(null);
+      } catch (err: any) {
+        console.error('Analytics fetch error:', err);
+        setFetchError(err.message ?? 'Failed to load analytics');
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchAnalytics();

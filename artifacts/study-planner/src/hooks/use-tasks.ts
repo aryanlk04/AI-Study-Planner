@@ -11,7 +11,6 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
-  orderBy
 } from 'firebase/firestore';
 
 export interface Task {
@@ -42,24 +41,24 @@ export function useTasks() {
 
     const q = query(
       collection(db, 'tasks'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
     );
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const tasksData = snapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            // Convert Firestore Timestamps to Dates
-            dueDate: data.dueDate?.toDate() || null,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date(),
-          } as Task;
-        });
+        const tasksData = snapshot.docs
+          .map((doc) => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              ...data,
+              dueDate: data.dueDate?.toDate() || null,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate() || new Date(),
+            } as Task;
+          })
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         setTasks(tasksData);
         setLoading(false);
         setError(null);

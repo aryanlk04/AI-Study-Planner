@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { PageError } from '@/components/ErrorMessage';
 import { Link } from 'wouter';
 import { 
   Play, 
@@ -31,7 +32,7 @@ const weeklyData = [
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { tasks, loading: tasksLoading } = useTasks();
+  const { tasks, loading: tasksLoading, error: tasksError } = useTasks();
   const { subjects } = useSubjects();
   
   const [greeting, setGreeting] = useState('');
@@ -67,9 +68,13 @@ export default function DashboardPage() {
   if (tasksLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+        <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
       </div>
     );
+  }
+
+  if (tasksError) {
+    return <PageError error={tasksError} title="Failed to load dashboard" />;
   }
 
   return (
