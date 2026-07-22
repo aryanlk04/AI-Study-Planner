@@ -75,16 +75,19 @@ export function useTasks() {
 
   const addTask = async (task: Omit<Task, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) throw new Error('Must be logged in');
-    
     try {
+      // Strip undefined values — Firestore rejects them
+      const safeTask = Object.fromEntries(
+        Object.entries(task).filter(([, v]) => v !== undefined)
+      );
       const docRef = await addDoc(collection(db, 'tasks'), {
-        ...task,
+        ...safeTask,
         userId: user.uid,
         createdAt: serverTimestamp(),
       });
       return docRef.id;
     } catch (err) {
-      console.error("Error adding task:", err);
+      console.error('Error adding task:', err);
       throw err;
     }
   };

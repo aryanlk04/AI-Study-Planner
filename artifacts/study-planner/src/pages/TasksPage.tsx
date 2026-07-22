@@ -28,7 +28,7 @@ export default function TasksPage() {
       title: newTaskTitle,
       status: columnId,
       priority: 'medium',
-      subjectId: newTaskSubject || undefined,
+      ...(newTaskSubject ? { subjectId: newTaskSubject } : {}),
     });
     
     setNewTaskTitle('');

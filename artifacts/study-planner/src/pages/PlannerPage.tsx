@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/firebase/config';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Brain, Calendar, CheckSquare, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -12,17 +12,31 @@ export default function PlannerPage() {
 
   useEffect(() => {
     const fetchPlans = async () => {
-      if (!user) return;
-      const q = query(
-        collection(db, 'planner'),
-        where('userId', '==', user.uid),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-      
-      const snap = await getDocs(q);
-      setPlans(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      try {
+        // No orderBy — avoids composite index requirement. Sort client-side.
+        const q = query(
+          collection(db, 'planner'),
+          where('userId', '==', user.uid)
+        );
+        const snap = await getDocs(q);
+        const data = snap.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as any))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.toDate?.()?.getTime() ?? 0;
+            const bTime = b.createdAt?.toDate?.()?.getTime() ?? 0;
+            return bTime - aTime;
+          })
+          .slice(0, 5);
+        setPlans(data);
+      } catch (err: any) {
+        console.error('PlannerPage fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
     };
     
     fetchPlans();
